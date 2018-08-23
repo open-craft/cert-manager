@@ -86,6 +86,8 @@ class ConsulDomainConfiguration(DomainConfiguration):
         consul_client = consul.Consul()
         dummy, all_keys = consul_client.kv.get(self.prefix, recurse=True, keys=True)
         domain_groups = {}
+        if all_keys is None:
+            return domain_groups
         domains_re = re.compile(r"{}/(\d+)/domains$".format(self.prefix))
         for key in all_keys:
             # all_keys includes all kinds of settings.  We need to filter out the "domains" setting
