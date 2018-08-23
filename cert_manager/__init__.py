@@ -70,7 +70,7 @@ class CertificateManager:
         """Remove unneeded certificates from the backend storage."""
         all_domains = set().union(*configured_domains.values())
         for main_domain, dns_names in current_domains.items():
-            if dns_names.is_disjoint(all_domains):
+            if dns_names.isdisjoint(all_domains):
                 # The certificate isn't needed for any of the currently active domains
                 self.remove_cert(main_domain)
 
