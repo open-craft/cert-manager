@@ -17,12 +17,14 @@ class CertificateManager:
     which certificates need to be requested and which ones removes, and actuating the required
     actions.
     """
-    def __init__(self, certbot, domain_config, cert_storage, additional_domains):
+    def __init__(self, certbot, domain_config, cert_storage, additional_domains,
+                 extract_x509_dns_names_func=extract_x509_dns_names):
         """Initialize a CertificateManager instance."""
         self.certbot = certbot
         self.domain_config = domain_config
         self.cert_storage = cert_storage
         self.additional_domains = additional_domains
+        self.extract_x509_dns_names = extract_x509_dns_names_func
 
     def remove_cert(self, main_domain):
         """Remove a certificate from both Certbot and the backend storage."""
@@ -78,7 +80,7 @@ class CertificateManager:
         current_domains = {}
         for main_domain, pem_data in current_certs.items():
             try:
-                current_domains[main_domain] = set(extract_x509_dns_names(pem_data))
+                current_domains[main_domain] = set(self.extract_x509_dns_names(pem_data))
             except ValueError:
                 logger.error("Unable to determine domain names for certificate %s.", main_domain)
         return current_domains
