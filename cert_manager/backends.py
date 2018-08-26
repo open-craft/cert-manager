@@ -72,7 +72,7 @@ class ConsulDomainConfiguration(DomainConfiguration):
     def __init__(self, prefix):
         """Initialize the backend with the given Consul prefix."""
         self.prefix = prefix
-
+        self.consul_client = consul.Consul()
 
     def get_domain_groups(self):
         """Return all currently configured domain groups.
@@ -83,8 +83,7 @@ class ConsulDomainConfiguration(DomainConfiguration):
 
         This function returns a dictionary mapping the main domain name to a list of domains.
         """
-        consul_client = consul.Consul()
-        dummy, all_keys = consul_client.kv.get(self.prefix, recurse=True, keys=True)
+        dummy, all_keys = self.consul_client.kv.get(self.prefix, recurse=True, keys=True)
         domain_groups = {}
         if all_keys is None:
             return domain_groups
@@ -94,7 +93,7 @@ class ConsulDomainConfiguration(DomainConfiguration):
             # for each instance.
             match = domains_re.match(key)
             if match:
-                dummy, data = consul_client.kv.get(key)
+                dummy, data = self.consul_client.kv.get(key)
                 try:
                     instance_domains = json.loads(data["Value"].decode())
                     instance_domains = [domain.lower() for domain in instance_domains]
@@ -113,6 +112,7 @@ class ConsulCertificateStorage(CertificateStorage):
     def __init__(self, prefix):
         """Initialize the backend with the given Consul prefix."""
         self.prefix = prefix
+        self.consul_client = consul.Consul()
 
     def get_key(self, main_domain):
         """Return the Consul key storing the certificate for the given domain."""
@@ -124,8 +124,7 @@ class ConsulCertificateStorage(CertificateStorage):
         The data is returned as a `bytes` object.  If the storage backend does not contain any data
         for the given key, `None` is returned instead.
         """
-        consul_client = consul.Consul()
-        dummy, data = consul_client.kv.get(self.get_key(main_domain))
+        dummy, data = self.consul_client.kv.get(self.get_key(main_domain))
         return data
 
     def get_all_certs(self):
@@ -133,8 +132,7 @@ class ConsulCertificateStorage(CertificateStorage):
 
         The dictionary maps the main domain names to the PEM data of each certificate.
         """
-        consul_client = consul.Consul()
-        dummy, values = consul_client.kv.get(self.prefix, recurse=True)
+        dummy, values = self.consul_client.kv.get(self.prefix, recurse=True)
         certs = {}
         if values is None:
             return certs
@@ -147,8 +145,7 @@ class ConsulCertificateStorage(CertificateStorage):
 
     def deploy_cert(self, main_domain, pem_data):
         """Deploy the given PEM certificate to the storage backend."""
-        consul_client = consul.Consul()
-        success = consul_client.kv.put(self.get_key(main_domain), pem_data)
+        success = self.consul_client.kv.put(self.get_key(main_domain), pem_data)
         if not success:
             raise StorageError("Could not store the certificate to Consul.")
 
@@ -157,7 +154,6 @@ class ConsulCertificateStorage(CertificateStorage):
 
         If there is no certificate for the given key, this function does nothing.
         """
-        consul_client = consul.Consul()
-        success = consul_client.kv.delete(self.get_key(main_domain))
+        success = self.consul_client.kv.delete(self.get_key(main_domain))
         if not success:
             raise StorageError("Could not store the certificate to Consul.")

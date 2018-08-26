@@ -1,11 +1,7 @@
-"""The main CertificateManager class that interacts with Certbot."""
+"""A client interacting with Certbot."""
 
-import logging
 import pathlib
 import subprocess
-
-
-logger = logging.getLogger(__name__)
 
 
 class CertbotClient:
@@ -38,17 +34,7 @@ class CertbotClient:
         for domain in domains:
             command += ["--domain", domain]
         result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        if result.returncode == 0:
-            logger.info(
-                "Successfully obtained a new certificate for these domains:\n    %s",
-                "\n    ".join(domains),
-            )
-        else:
-            logger.error(
-                "Failed to obtain a new certificate for these domains:\n    %s\n%s",
-                "\n    ".join(domains),
-                result.stderr,
-            )
+        result.check_returncode()
 
     def get_cert_data_from_live_dir(self, live_dir):
         """Load the PEM data from the given Certbot live directory.
@@ -71,16 +57,7 @@ class CertbotClient:
             "--cert-name", main_domain,
         ]
         result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        if result.returncode == 0:
-            logger.info(
-                "Successfully deleted the certificate for %s from Certbot.", main_domain
-            )
-        else:
-            logger.error(
-                "Failed to delete the certificate for %s from Certbot:\n%s",
-                main_domain,
-                result.stderr,
-            )
+        result.check_returncode()
 
     def list_certs(self):
         """List the certificate names of all certificates currently managed by Certbot."""
@@ -90,9 +67,7 @@ class CertbotClient:
             stdout=subprocess.PIPE,
             universal_newlines=True,
         )
-        if result.returncode != 0:
-            logger.error("Listing certificates managed by Certbot failed:\n%s", result.stderr)
-            return []
+        result.check_returncode()
         return [
             line.partition(": ")[-1]
             for line in result.stdout.splitlines()

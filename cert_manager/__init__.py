@@ -1,6 +1,7 @@
 """The main certificate manager class."""
 
 import logging
+import subprocess
 
 from .utils import extract_x509_dns_names
 from .backends import StorageError
@@ -25,22 +26,52 @@ class CertificateManager:
 
     def remove_cert(self, main_domain):
         """Remove a certificate from both Certbot and the backend storage."""
-        self.certbot.remove_cert(main_domain)
+        try:
+            self.certbot.remove_cert(main_domain)
+            logger.info(
+                "Successfully deleted the certificate for %s from Certbot.", main_domain
+            )
+        except subprocess.CalledProcessError as exc:
+            logger.error(
+                "Failed to delete the certificate for %s from Certbot:\n%s",
+                main_domain,
+                exc.stderr,
+            )
         try:
             self.cert_storage.remove_cert(main_domain)
+            logger.info(
+                "Successfully deleted the certificate for %s from the storage backend.", main_domain
+            )
         except StorageError:
             logger.error(
                 "Failed to delete the certificate for %s from the storage backend.", main_domain
             )
-        else:
+
+    def request_cert(self, domains):
+        """Request a new certificate using the Certbot client."""
+        try:
+            self.certbot.request_cert(domains)
             logger.info(
-                "Successfully deleted the certificate for %s from the storage backend.", main_domain
+                "Successfully obtained a new certificate for these domains:\n    %s",
+                "\n    ".join(domains),
+            )
+        except subprocess.CalledProcessError as exc:
+            logger.error(
+                "Failed to obtain a new certificate for these domains:\n    %s\n%s",
+                "\n    ".join(domains),
+                exc.stderr,
+            )
+        except Exception:  # pylint: disable=broad-except
+            logger.exception(
+                "An exception occurred when trying to obtain a new certificate for these "
+                "domains:\n    %s",
+                "\n    ".join(domains),
             )
 
     def get_current_domains(self):
         """Return the domain names of all certificates in the storage backend.
 
-        The return value is a dictionary mapping each certificate name to the list of all domain
+        The return value is a dictionary mapping each certificate name to the set of all domain
         names the certificate covers.
         """
         current_certs = self.cert_storage.get_all_certs()
@@ -57,14 +88,7 @@ class CertificateManager:
         for main_domain, domains in configured_domains.items():
             if set(domains) - current_domains.get(main_domain, set()):
                 # At least some of the domains are not covered by the current certificate
-                try:
-                    self.certbot.request_cert(domains)
-                except Exception:  # pylint: disable=broad-except
-                    logger.exception(
-                        "An exception occurred when trying to obtain a new certificate for these "
-                        "domains:\n    %s",
-                        "\n    ".join(domains),
-                    )
+                self.request_cert(domains)
 
     def remove_unneeded(self, configured_domains, current_domains):
         """Remove unneeded certificates from the backend storage."""
