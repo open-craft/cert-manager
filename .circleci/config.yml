@@ -1,0 +1,27 @@
+---
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.6.6
+      - image: consul:1.2.2
+        environment:
+          CONSUL_BIND_INTERFACE: eth0
+    environment:
+      PIPENV_VENV_IN_PROJECT: true
+    steps:
+      - checkout
+      - restore_cache:
+          key: dependencies-{{ checksum "Pipfile.lock" }}
+      - run:
+          name: Set up pipenv and install requirements.
+          command: |
+            pip install --user pipenv
+            pipenv install --dev
+      - save_cache:
+          key: dependencies-{{ checksum "Pipfile.lock" }}
+          paths:
+            - ".venv"
+      - run:
+          name: Run the tests.
+          command: pipenv run pytest
