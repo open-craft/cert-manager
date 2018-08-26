@@ -69,10 +69,10 @@ class ConsulDomainConfiguration(DomainConfiguration):
     The data is assumed to be in the format stored by the Ocim Open edX instance manager.
     """
 
-    def __init__(self, prefix):
+    def __init__(self, prefix, consul_client=None):
         """Initialize the backend with the given Consul prefix."""
         self.prefix = prefix
-        self.consul_client = consul.Consul()
+        self.consul_client = consul_client or consul.Consul()
 
     def get_domain_groups(self):
         """Return all currently configured domain groups.
@@ -109,10 +109,10 @@ class ConsulDomainConfiguration(DomainConfiguration):
 class ConsulCertificateStorage(CertificateStorage):
     """Consul-based certificate storage backend."""
 
-    def __init__(self, prefix):
+    def __init__(self, prefix, consul_client=None):
         """Initialize the backend with the given Consul prefix."""
         self.prefix = prefix
-        self.consul_client = consul.Consul()
+        self.consul_client = consul_client or consul.Consul()
 
     def get_key(self, main_domain):
         """Return the Consul key storing the certificate for the given domain."""
