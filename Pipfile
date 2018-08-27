@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+certbot = ">= 0.26.1"
+python-consul = "~= 1.1"
+pyopenssl = "~= 18.0"
+
+[dev-packages]
+pylint = "*"
+rope = "*"
+pytest = "*"
+
+[requires]
+python_version = "3"
