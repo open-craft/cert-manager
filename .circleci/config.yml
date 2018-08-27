@@ -15,9 +15,7 @@ jobs:
           key: dependencies-{{ checksum "Pipfile.lock" }}
       - run:
           name: Set up pipenv and install requirements.
-          command: |
-            pip install --user pipenv
-            pipenv install --dev
+          command: pipenv install --dev
       - save_cache:
           key: dependencies-{{ checksum "Pipfile.lock" }}
           paths:
