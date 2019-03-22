@@ -51,7 +51,7 @@ def main(args):
     config = parse_command_line(args)
     configure_logger(logger, config.log_level.upper())
     if not config.deploy_hook:
-        config.deploy_hook = "deploy_cert.py --log-level '{}' --consul-certs-prefix '{}'".format(
+        config.deploy_hook = "./deploy_cert.py --log-level '{}' --consul-certs-prefix '{}'".format(
             config.log_level, config.consul_certs_prefix
         )
     certbot_client = CertbotClient(
