@@ -13,6 +13,8 @@ import argparse
 import logging
 import sys
 
+import consul
+
 from cert_manager import CertificateManager
 from cert_manager.certbot import CertbotClient
 from cert_manager.backends import ConsulCertificateStorage, ConsulDomainConfiguration
@@ -39,6 +41,7 @@ def parse_command_line(args):
     parser.add_argument("--consul-ocim-prefix", default="ocim/instances")
     parser.add_argument("--consul-certs-prefix", default="certs")
     parser.add_argument("--webroot-path", default="/var/www/certbot")
+    parser.add_argument("--consul-token")
     parser.add_argument("--deploy-hook")
     return parser.parse_args(args)
 
@@ -57,10 +60,11 @@ def main(args):
         deploy_hook=config.deploy_hook,
         letsencrypt_use_staging=config.letsencrypt_use_staging,
     )
+    consul_client = consul.Consul(token=config.consul_token)
     manager = CertificateManager(
         certbot_client,
-        ConsulDomainConfiguration(config.consul_ocim_prefix),
-        ConsulCertificateStorage(config.consul_certs_prefix),
+        ConsulDomainConfiguration(config.consul_ocim_prefix, consul_client=consul_client),
+        ConsulCertificateStorage(config.consul_certs_prefix, consul_client=consul_client),
         config.additional_domain,
     )
     manager.run()
