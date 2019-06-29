@@ -26,6 +26,21 @@ def consul_client():
 class TestConsulDomainConfiguration:
     """Tests for ConsulDomainConfiguration."""
 
+    def add_config_data(self, consul_client, domains, prefix):
+        """Adds a dummy config data in K/V form."""
+
+        for instance_id, domains in enumerate(domains, 1):
+            config = {
+                'domain_slug': 'instance-{}'.format(instance_id),
+                'domain': domains[0],
+                'name': 'Instance {}'.format(instance_id),
+                'domains': domains,
+                'health_checks_enabled': 'false',
+                'basic_auth': 'dXNlcjpwYXNzd29yZAo=',
+                'active_app_servers': [],
+            }
+            consul_client.kv.put('{}/{}'.format(prefix, instance_id), json.dumps(config).encode('utf-8'))
+
     def add_instance_to_consul(self, consul_client, prefix, instance_id, domains):
         """Add fake instance data to Consul."""
         for key, value in [
@@ -60,6 +75,21 @@ class TestConsulDomainConfiguration:
         """Test for get_domain_groups() in case no data is in Consul yet."""
         domain_groups = self.get_domain_groups(consul_client, [])
         assert domain_groups == {}
+
+    def test_get_domain_groups_from_kv(self, consul_client):
+        """
+        Test for get_domain_groups() when configuration is stored in a single K/V value.
+        """
+        prefix = CONSUL_PREFIX + "/instances"
+        expected_domain_groups = [
+            ["lms.example.com", "studio.example.com"],
+            ["opencraft.com"],
+            ["lms.opencraft.hosting", "studio.opencraft.hosting", "courses.example.com"],
+        ]
+        self.add_config_data(consul_client, expected_domain_groups, prefix)
+        domain_config = ConsulDomainConfiguration(prefix, consul_client)
+        domain_groups = domain_config.get_domain_groups()
+        assert domain_groups == {domains[0]: domains for domains in expected_domain_groups}
 
 
 class TestConsulCertificateStorage:
