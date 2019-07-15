@@ -88,6 +88,7 @@ class ConsulDomainConfiguration(DomainConfiguration):
         if all_keys is None:
             return domain_groups
         domains_re = re.compile(r"{}/(\d+)/domains$".format(self.prefix))
+        config_re = re.compile(r"{}/(\d+)$".format(self.prefix))
         for key in all_keys:
             # all_keys includes all kinds of settings.  We need to filter out the "domains" setting
             # for each instance.
@@ -103,6 +104,20 @@ class ConsulDomainConfiguration(DomainConfiguration):
                     logger.error(
                         "Consul domains configuration for instance %s invalid.", match.group(1)
                     )
+
+            match = config_re.match(key)
+            if match:
+                dummy, data = self.consul_client.kv.get(key)
+                try:
+                    config = json.loads(data["Value"].decode('utf-8'))
+                    instance_domains = [domain.lower() for domain in config['domains']]
+                    main_domain = config['domain']
+                    domain_groups[main_domain] = instance_domains
+                except (TypeError, KeyError):
+                    logger.error(
+                        "Consul domains configuration for instance %s invalid.", match.group(1)
+                    )
+
         return domain_groups
 
 
