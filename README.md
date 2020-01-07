@@ -19,3 +19,18 @@ You can then install the development requirements using
 and run the tests with
 
     pipenv run pytest
+
+How to reprovision certificates
+-------------------------------
+
+If a certificate wasn't automatically renewed for some reason, you can trigger a renewal in this way:
+
+1. Log in to the `cert-manager` server as root and run `cerbot delete`, then select the number of the certificate you want to delete.
+
+2. From the consul web interface, navigate to `ocim/certs` and delete the entry corresponding to the old certificate.
+
+3. From the consul web interface, navigate to `ocim/instances` and find the instance number that you're editing. You can find the instance ID in Ocim (`OpenEdXInstance` admin). Edit the instance data by adding some harmless whitespace and click save. This will trigger the renewal.
+
+4. You can watch `journalctl -f -u cert-manager.service` in cert-manager to verify that cert-manager requested the new certificate. You should see a message like _Successfully obtained a new certificate for these domains:_
+
+5. After some seconds (around 15) the site will be working with the new certificate. You may need to empty the SSL cache from your browser
