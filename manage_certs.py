@@ -11,6 +11,7 @@ Certificates are requested using Certbot.
 
 import argparse
 import logging
+import pathlib
 import sys
 
 import consul
@@ -50,9 +51,12 @@ def main(args):
     """Parse command line, run certificate manager."""
     config = parse_command_line(args)
     configure_logger(logger, config.log_level.upper())
+    cert_manager_dir = str(pathlib.Path(__file__).resolve().parent)
     if not config.deploy_hook:
-        config.deploy_hook = "./deploy_cert.py --log-level '{}' --consul-certs-prefix '{}'".format(
-            config.log_level, config.consul_certs_prefix
+        config.deploy_hook = (
+            "cd {}; pipenv run python ./deploy_cert.py --log-level '{}' --consul-certs-prefix '{}'".format(
+                cert_manager_dir, config.log_level, config.consul_certs_prefix
+            )
         )
     certbot_client = CertbotClient(
         contact_email=config.contact_email,
