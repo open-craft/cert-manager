@@ -51,12 +51,13 @@ def main(args):
     """Parse command line, run certificate manager."""
     config = parse_command_line(args)
     configure_logger(logger, config.log_level.upper())
-    cert_manager_dir = str(pathlib.Path(__file__).resolve().parent)
+    cert_manager_dir = pathlib.Path(__file__).resolve().parent
+    pipfile_location = cert_manager_dir.joinpath('Pipfile')
     if not config.deploy_hook:
-        config.deploy_hook = (
-            "cd {}; pipenv run python ./deploy_cert.py --log-level '{}' --consul-certs-prefix '{}'".format(
-                cert_manager_dir, config.log_level, config.consul_certs_prefix
-            )
+        pipenv_prefix_command = 'PIPENV_PIPFILE={} /usr/local/bin/pipenv run python '
+        deploy_cert_command = "{}/deploy_cert.py --log-level '{}' --consul-certs-prefix '{}'"
+        config.deploy_hook = (pipenv_prefix_command + deploy_cert_command).format(
+                str(pipfile_location), str(cert_manager_dir), config.log_level, config.consul_certs_prefix
         )
     certbot_client = CertbotClient(
         contact_email=config.contact_email,
