@@ -43,7 +43,7 @@ def parse_command_line(args):
     parser.add_argument("--consul-certs-prefix", default="certs")
     parser.add_argument("--webroot-path", default="/var/www/certbot")
     parser.add_argument("--consul-token")
-    parser.add_argument("--deploy-hook")
+    parser.add_argument("--deploy-hook", default='/usr/local/sbin/deploy_cert.sh')
     return parser.parse_args(args)
 
 
@@ -52,12 +52,6 @@ def main(args):
     config = parse_command_line(args)
     configure_logger(logger, config.log_level.upper())
     cert_manager_dir = str(pathlib.Path(__file__).resolve().parent)
-    if not config.deploy_hook:
-        config.deploy_hook = (
-            "cd {}; pipenv run python ./deploy_cert.py --log-level '{}' --consul-certs-prefix '{}'".format(
-                cert_manager_dir, config.log_level, config.consul_certs_prefix
-            )
-        )
     certbot_client = CertbotClient(
         contact_email=config.contact_email,
         webroot_path=config.webroot_path,
