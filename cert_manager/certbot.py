@@ -25,7 +25,6 @@ class CertbotClient:
             "--non-interactive",
             "--agree-tos",
             "--keep",
-            "--allow-subset-of-names",
             "--deploy-hook", self.deploy_hook,
             "--cert-name", domains[0],
         ]
