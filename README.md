@@ -12,9 +12,9 @@ To run the unit tests locally, first make sure you have pipenv installed.  One w
 
     pip install --user pipenv
 
-You can then install the development requirements using
+You can then install the pinned development requirements using
 
-    pipenv install --dev
+    pipenv install --dev --ignore-pipfile
 
 and run the tests with
 
