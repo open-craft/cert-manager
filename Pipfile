@@ -18,5 +18,5 @@ rope = "*"
 pytest = "*"
 
 [requires]
-# Match version on Ubuntu LTS 16.04.6
-python_version = "3.5.2"
+# Match version on Ubuntu LTS 16.04.6 as closely as possible
+python_version = "3.5"
