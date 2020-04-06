@@ -12,8 +12,8 @@ jobs:
     steps:
       - checkout
       - run: 
-          name: Install pipenv
-          command: pip install --user pipenv
+          name: Install pipenv globally
+          command: pip install pipenv
       - restore_cache:
           key: dependencies-{{ checksum "Pipfile.lock" }}
       - run:
