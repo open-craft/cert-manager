@@ -12,17 +12,17 @@ jobs:
     steps:
       - checkout
       - run: 
-          name: Install pipenv globally
-          command: pip install pipenv
+          name: Install pipenv locally
+          command: pip install --user pipenv
       - restore_cache:
           key: dependencies-{{ checksum "Pipfile.lock" }}
       - run:
           name: Set up pipenv and install requirements.
-          command: pipenv install --dev --ignore-pipfile
+          command: ~/.local/bin/pipenv install --dev --ignore-pipfile
       - save_cache:
           key: dependencies-{{ checksum "Pipfile.lock" }}
           paths:
             - ".venv"
       - run:
           name: Run the tests.
-          command: pipenv run pytest
+          command: ~/.local/bin/pipenv run pytest
