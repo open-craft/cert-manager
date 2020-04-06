@@ -18,11 +18,11 @@ jobs:
           key: dependencies-{{ checksum "Pipfile.lock" }}
       - run:
           name: Set up pipenv and install requirements.
-          command: ~/.local/bin/pipenv --python /usr/bin/python3.5 install --dev --ignore-pipfile
+          command: ~/.local/bin/pipenv --python /usr/local/bin/python install --dev --ignore-pipfile
       - save_cache:
           key: dependencies-{{ checksum "Pipfile.lock" }}
           paths:
             - ".venv"
       - run:
           name: Run the tests.
-          command: ~/.local/bin/pipenv --python /usr/bin/python3.5 run pytest
+          command: ~/.local/bin/pipenv --python /usr/local/bin/python run pytest
