@@ -3,23 +3,31 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/python:3.6.6
+      - image: ubuntu:xenial
       - image: consul:1.2.2
         environment:
           CONSUL_BIND_INTERFACE: eth0
     environment:
       PIPENV_VENV_IN_PROJECT: true
+      LC_ALL: C.UTF-8
+      LANG: C.UTF-8
     steps:
       - checkout
+      - run:
+          name: Install python3 and pip3
+          command: apt-get update && apt-get install -y python3 python3-pip
+      - run: 
+          name: Install pipenv locally
+          command: pip3 install --user pipenv
       - restore_cache:
           key: dependencies-{{ checksum "Pipfile.lock" }}
       - run:
           name: Set up pipenv and install requirements.
-          command: pipenv install --dev --ignore-pipfile
+          command: ~/.local/bin/pipenv install --dev --ignore-pipfile
       - save_cache:
           key: dependencies-{{ checksum "Pipfile.lock" }}
           paths:
             - ".venv"
       - run:
           name: Run the tests.
-          command: pipenv run pytest
+          command: ~/.local/bin/pipenv run pytest

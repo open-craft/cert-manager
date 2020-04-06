@@ -10,6 +10,7 @@ pyopenssl = "~= 18.0"
 # Pin certbot and acme to the system-wide versions (see SE-2197)
 certbot = "==0.31.0"
 acme = "==0.31.0"
+mock = "==3.0.5"
 
 [dev-packages]
 pylint = "*"
@@ -17,4 +18,5 @@ rope = "*"
 pytest = "*"
 
 [requires]
-python_version = "3"
+# Match version on Ubuntu LTS 16.04.6 as closely as possible
+python_version = "3.5"
