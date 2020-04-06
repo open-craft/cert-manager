@@ -11,6 +11,9 @@ jobs:
       PIPENV_VENV_IN_PROJECT: true
     steps:
       - checkout
+      - run: 
+          name: Install pipenv
+          command: pip install --user pipenv
       - restore_cache:
           key: dependencies-{{ checksum "Pipfile.lock" }}
       - run:
