@@ -1,5 +1,6 @@
 """The main certificate manager class."""
 
+from datetime import datetime
 import logging
 import subprocess
 
@@ -18,11 +19,12 @@ class CertificateManager:
     actions.
     """
     def __init__(self, certbot, domain_config, cert_storage, additional_domains,
-                 extract_x509_dns_names_func=extract_x509_dns_names):
+                 dns_delay=0, extract_x509_dns_names_func=extract_x509_dns_names):
         """Initialize a CertificateManager instance."""
         self.certbot = certbot
         self.domain_config = domain_config
         self.cert_storage = cert_storage
+        self.dns_delay = dns_delay
         self.additional_domains = additional_domains
         self.extract_x509_dns_names = extract_x509_dns_names_func
 
@@ -87,14 +89,24 @@ class CertificateManager:
 
     def request_missing(self, configured_domains, current_domains):
         """Request new certificates where needed."""
-        for main_domain, domains in configured_domains.items():
+        for main_domain, domain_group in configured_domains.items():
+            # Check if at least some of the domains are not covered by the current certificate
+            domains = domain_group['domains']
             if set(domains) - current_domains.get(main_domain, set()):
-                # At least some of the domains are not covered by the current certificate
-                self.request_cert(domains)
+                # Request new certificates, but only if DNS records for the domain have already
+                # been set, *and* they have been set more than a preconfigured number of seconds ago
+                # to allow the changes to propagate.
+                timestamp = datetime.utcnow().timestamp()
+                dns_updated = domain_group['dns_records_updated']
+                if dns_updated is not None and timestamp - dns_updated > self.dns_delay:
+                    self.request_cert(domains)
 
     def remove_unneeded(self, configured_domains, current_domains):
         """Remove unneeded certificates from the backend storage."""
-        all_domains = set().union(*configured_domains.values())
+        all_domains = set()
+        for main_domain, domain_group in configured_domains.items():
+            if domain_group['dns_records_updated'] is not None:
+                all_domains.update(domain_group['domains'])
         for main_domain, dns_names in current_domains.items():
             if dns_names.isdisjoint(all_domains):
                 # The certificate isn't needed for any of the currently active domains
@@ -105,7 +117,11 @@ class CertificateManager:
         configured_domains = self.domain_config.get_domain_groups()
         if self.additional_domains is not None:
             for domain in self.additional_domains:
-                configured_domains[domain] = [domain]
+                configured_domains[domain] = {
+                    'domains': [domain],
+                    # Assume DNS entries for additional have been set up a long time ago:
+                    'dns_records_updated': 0,
+                }
         current_domains = self.get_current_domains()
         self.request_missing(configured_domains, current_domains)
         self.remove_unneeded(configured_domains, current_domains)

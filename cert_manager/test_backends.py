@@ -26,70 +26,53 @@ def consul_client():
 class TestConsulDomainConfiguration:
     """Tests for ConsulDomainConfiguration."""
 
-    def add_config_data(self, consul_client, domains, prefix):
+    prefix = CONSUL_PREFIX + "/instances"
+
+    def add_config_data(self, consul_client, domain_groups, prefix):
         """Adds a dummy config data in K/V form."""
 
-        for instance_id, domains in enumerate(domains, 1):
+        for instance_id, main_domain in enumerate(domain_groups, 1):
             config = {
                 'domain_slug': 'instance-{}'.format(instance_id),
-                'domain': domains[0],
+                'domain': main_domain,
                 'name': 'Instance {}'.format(instance_id),
-                'domains': domains,
+                'domains': domain_groups[main_domain]['domains'],
+                'dns_records_updated': domain_groups[main_domain]['dns_records_updated'],
                 'health_checks_enabled': 'false',
                 'basic_auth': 'dXNlcjpwYXNzd29yZAo=',
                 'active_app_servers': [],
             }
             consul_client.kv.put('{}/{}'.format(prefix, instance_id), json.dumps(config).encode('utf-8'))
 
-    def add_instance_to_consul(self, consul_client, prefix, instance_id, domains):
-        """Add fake instance data to Consul."""
-        for key, value in [
-                ("active_appservers", "[]"),
-                ("basic_auth", "dXNlcjpwYXNzd29yZAo="),
-                ("domains", json.dumps(domains)),
-                ("health_checks_enabled", "false"),
-                ("name", "Instance"),
-                ("version", "1"),
-            ]:
-            consul_client.kv.put("{}/{}/{}".format(prefix, instance_id, key), value)
-
-    def get_domain_groups(self, consul_client, domain_groups):
-        """Helper to add the domain groups to Consul and retrieve them again."""
-        prefix = CONSUL_PREFIX + "/instances"
-        for instance_id, domains in enumerate(domain_groups, 1):
-            self.add_instance_to_consul(consul_client, prefix, instance_id, domains)
-        domain_config = ConsulDomainConfiguration(prefix, consul_client)
-        return domain_config.get_domain_groups()
-
     def test_get_domain_groups(self, consul_client):
-        """Test for get_domain_groups()."""
-        expected_domain_groups = [
-            ["lms.example.com", "studio.example.com"],
-            ["opencraft.com"],
-            ["lms.opencraft.hosting", "studio.opencraft.hosting", "courses.example.com"],
-        ]
-        domain_groups = self.get_domain_groups(consul_client, expected_domain_groups)
-        assert domain_groups == {domains[0]: domains for domains in expected_domain_groups}
-
-    def test_get_domain_groups_no_data(self, consul_client):
-        """Test for get_domain_groups() in case no data is in Consul yet."""
-        domain_groups = self.get_domain_groups(consul_client, [])
-        assert domain_groups == {}
-
-    def test_get_domain_groups_from_kv(self, consul_client):
         """
         Test for get_domain_groups() when configuration is stored in a single K/V value.
         """
-        prefix = CONSUL_PREFIX + "/instances"
-        expected_domain_groups = [
-            ["lms.example.com", "studio.example.com"],
-            ["opencraft.com"],
-            ["lms.opencraft.hosting", "studio.opencraft.hosting", "courses.example.com"],
-        ]
-        self.add_config_data(consul_client, expected_domain_groups, prefix)
-        domain_config = ConsulDomainConfiguration(prefix, consul_client)
+        expected_domain_groups = {
+            "example.com": {
+                "domains": ["lms.example.com", "studio.example.com"],
+                "dns_records_updated": 123456789,
+            },
+            "opencraft.com": {
+                "domains": ["opencraft.com"],
+                "dns_records_updated": 123123123,
+            },
+            "opencraft.hosting": {
+                "domains": ["lms.opencraft.hosting", "studio.opencraft.hosting", "courses.example.com"],
+                "dns_records_updated": 123333333
+            },
+        }
+        self.add_config_data(consul_client, expected_domain_groups, self.prefix)
+        domain_config = ConsulDomainConfiguration(self.prefix, consul_client)
         domain_groups = domain_config.get_domain_groups()
-        assert domain_groups == {domains[0]: domains for domains in expected_domain_groups}
+        assert domain_groups == expected_domain_groups
+
+    def test_get_domain_groups_no_data(self, consul_client):
+        """Test for get_domain_groups() in case no data is in Consul yet."""
+        domain_config = ConsulDomainConfiguration(self.prefix, consul_client)
+        domain_groups = domain_config.get_domain_groups()
+        assert domain_groups == {}
+
 
 
 class TestConsulCertificateStorage:

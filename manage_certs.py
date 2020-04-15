@@ -44,6 +44,7 @@ def parse_command_line(args):
     parser.add_argument("--webroot-path", default="/var/www/certbot")
     parser.add_argument("--consul-token")
     parser.add_argument("--deploy-hook", default='/usr/local/sbin/deploy_cert.sh')
+    parser.add_argument("--dns-delay", type=int, default=120)
     return parser.parse_args(args)
 
 
@@ -64,6 +65,7 @@ def main(args):
         ConsulDomainConfiguration(config.consul_ocim_prefix, consul_client=consul_client),
         ConsulCertificateStorage(config.consul_certs_prefix, consul_client=consul_client),
         config.additional_domain,
+        dns_delay=config.dns_delay,
     )
     manager.run()
 

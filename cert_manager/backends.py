@@ -20,7 +20,11 @@ class DomainConfiguration:
         certificate manager will ensure that there is a certificate for each configured domain
         group.
 
-        This function returns a dictionary mapping the main domain name to a list of domains.
+        This function returns a dictionary mapping the main domain name to a dict item of the form
+        {'domains': ['list', 'of', 'domains'], dns_records_updated: 1586841904}
+        where the 'domains' entry holds a list of domains in the group and the 'dns_records_updated'
+        is a unix timestamp of the time the DNS entries for the domain group were last updated,
+        or None if DNS records for the domain group don't  exist.
         """
         raise NotImplementedError
 
@@ -81,30 +85,18 @@ class ConsulDomainConfiguration(DomainConfiguration):
         certificate manager will ensure that there is a certificate for each configured domain
         group.
 
-        This function returns a dictionary mapping the main domain name to a list of domains.
+        This function returns a dictionary mapping the main domain name to a dict item of the form
+        {'domains': ['list', 'of', 'domains'], dns_records_updated: 1586841904}
+        where the 'domains' entry holds a list of domains in the group and the 'dns_records_updated'
+        is a unix timestamp of the time the DNS entries for the domain group were last updated,
+        or None if DNS records for the domain group don't  exist.
         """
         dummy, all_keys = self.consul_client.kv.get(self.prefix, recurse=True, keys=True)
         domain_groups = {}
         if all_keys is None:
             return domain_groups
-        domains_re = re.compile(r"{}/(\d+)/domains$".format(self.prefix))
         config_re = re.compile(r"{}/(\d+)$".format(self.prefix))
         for key in all_keys:
-            # all_keys includes all kinds of settings.  We need to filter out the "domains" setting
-            # for each instance.
-            match = domains_re.match(key)
-            if match:
-                dummy, data = self.consul_client.kv.get(key)
-                try:
-                    instance_domains = json.loads(data["Value"].decode())
-                    instance_domains = [domain.lower() for domain in instance_domains]
-                    main_domain = instance_domains[0]
-                    domain_groups[main_domain] = instance_domains
-                except (json.JSONDecodeError, TypeError, IndexError):
-                    logger.error(
-                        "Consul domains configuration for instance %s invalid.", match.group(1)
-                    )
-
             match = config_re.match(key)
             if match:
                 dummy, data = self.consul_client.kv.get(key)
@@ -112,7 +104,10 @@ class ConsulDomainConfiguration(DomainConfiguration):
                     config = json.loads(data["Value"].decode('utf-8'))
                     instance_domains = [domain.lower() for domain in config['domains']]
                     main_domain = config['domain']
-                    domain_groups[main_domain] = instance_domains
+                    domain_groups[main_domain] = {
+                        'domains': instance_domains,
+                        'dns_records_updated': config['dns_records_updated'],
+                    }
                 except (TypeError, KeyError):
                     logger.error(
                         "Consul domains configuration for instance %s invalid.", match.group(1)
