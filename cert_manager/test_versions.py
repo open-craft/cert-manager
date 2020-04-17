@@ -12,4 +12,4 @@ def test_certbot_version():
     """
     Test that certbot module matches the pinned version.
     """
-    assert certbot.__version__ == '0.31.0'
+    assert certbot.__version__ == '1.1.0'
