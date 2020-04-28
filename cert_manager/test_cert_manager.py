@@ -1,5 +1,6 @@
 """Test the CertificateManager class."""
 
+from datetime import datetime, timedelta
 import json
 
 from . import CertificateManager
@@ -99,11 +100,13 @@ class TestCertificateManager:
         cert_storage = FakeCertificateStorage()
         certbot = FakeCertbotClient(cert_storage)
         additional_domains = ["haproxy-1.example.com", "haproxy-2.example.com"]
+        dns_delay = timedelta(minutes=5).total_seconds()
         cert_manager = CertificateManager(
             certbot,
             domain_config,
             cert_storage,
             additional_domains,
+            dns_delay,
             fake_extract_x509_dns_names,
         )
 
@@ -112,15 +115,63 @@ class TestCertificateManager:
         assert certbot.removals == []
         certbot.reset()
 
-        domain_config.domain_groups["domain.com"] = ["domain.com", "www.domain.com"]
-        domain_config.domain_groups["other-domain.com"] = ["other-domain.com"]
+        domain_config.domain_groups["domain.com"] = {
+            "domains": ["domain.com", "www.domain.com"],
+            "dns_records_updated": (datetime.utcnow() - timedelta(days=1)).timestamp(),
+        }
+        domain_config.domain_groups["other-domain.com"] = {
+            "domains": ["other-domain.com"],
+            "dns_records_updated": (datetime.utcnow() - timedelta(hours=1)).timestamp(),
+        }
         cert_manager.run()
-        assert certbot.requests == domain_config.domain_groups
+        assert certbot.requests == {
+            "domain.com": ["domain.com", "www.domain.com"],
+            "other-domain.com": ["other-domain.com"],
+        }
         assert certbot.removals == []
         certbot.reset()
 
         del domain_config.domain_groups["domain.com"]
-        domain_config.domain_groups["opencraft.com"] = ["opencraft.com"]
+        domain_config.domain_groups["opencraft.com"] = {
+            "domains": ["opencraft.com"],
+            "dns_records_updated": (datetime.utcnow() - timedelta(minutes=6)).timestamp(),
+        }
         cert_manager.run()
         assert certbot.requests == {"opencraft.com": ["opencraft.com"]}
         assert certbot.removals == ["domain.com"]
+        certbot.reset()
+
+        # Certificate for new domain should not be requested if DNS records haven't been set yet.
+        domain_config.domain_groups["new-domain.com"] = {
+            "domains": ["new-domain.com"],
+            "dns_records_updated": None,
+        }
+        cert_manager.run()
+        assert certbot.requests == {}
+        assert certbot.removals == []
+        certbot.reset()
+
+        # Certificate for new domain should not be requested if DNS records have been set
+        # less than dns_delay seconds ago.
+        four_minutes_ago = (datetime.utcnow() - timedelta(minutes=4)).timestamp()
+        domain_config.domain_groups["new-domain.com"]["dns_records_updated"] = four_minutes_ago
+        cert_manager.run()
+        assert certbot.requests == {}
+        assert certbot.removals == []
+        certbot.reset()
+
+        # Certificate for new domain should be requested if DNS records were set more than
+        # dns_delay seconds ago.
+        more_than_five_minutes_ago = (datetime.utcnow() - timedelta(minutes=5.01)).timestamp()
+        domain_config.domain_groups["new-domain.com"]["dns_records_updated"] = more_than_five_minutes_ago
+        cert_manager.run()
+        assert certbot.requests == {"new-domain.com": ["new-domain.com"]}
+        assert certbot.removals == []
+        certbot.reset()
+
+        # Certificate should be removed if DNS records were unset.
+        domain_config.domain_groups["new-domain.com"]["dns_records_updated"] = None
+        cert_manager.run()
+        assert certbot.requests == {}
+        assert certbot.removals == ["new-domain.com"]
+        certbot.reset()
