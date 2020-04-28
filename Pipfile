@@ -6,10 +6,8 @@ name = "pypi"
 [packages]
 python-consul = "~= 1.1"
 pyopenssl = "~= 18.0"
-
-# Pin certbot and acme to the system-wide versions (see SE-2197)
-certbot = "==0.31.0"
-acme = "==0.31.0"
+certbot = "==1.1.0"
+acme = "==1.1.0"
 mock = "==3.0.5"
 
 [dev-packages]
