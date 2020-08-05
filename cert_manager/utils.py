@@ -1,8 +1,10 @@
 """Utility functions for the certificate manager."""
 
 import logging.handlers
+import smtplib
 
 import OpenSSL.crypto
+
 
 def extract_x509_dns_names(pem_data):
     """Extract the DNS names from the given PEM certificate."""
@@ -32,3 +34,9 @@ def configure_logger(logger_, log_level):
     stderr_handler = logging.StreamHandler()
     stderr_handler.setLevel(logging.ERROR)
     logger_.addHandler(stderr_handler)
+
+
+def send_email(from_address, to_addresses, message, mail_server='localhost'):
+    """Send email using locally setup mailserver"""
+    smtp = smtplib.SMTP(mail_server)
+    smtp.sendmail(from_address, to_addresses, message)

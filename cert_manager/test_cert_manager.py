@@ -2,6 +2,8 @@
 
 from datetime import datetime, timedelta
 import json
+import mock
+import subprocess
 
 from . import CertificateManager
 
@@ -175,3 +177,45 @@ class TestCertificateManager:
         assert certbot.requests == {}
         assert certbot.removals == ["new-domain.com"]
         certbot.reset()
+
+    @mock.patch('cert_manager.send_email')
+    def test_failure_alert_email(self, mock_send_email):
+        domain_config = FakeDomainConfiguration()
+        cert_storage = FakeCertificateStorage()
+        certbot = FakeCertbotClient(cert_storage)
+        dns_delay = timedelta(minutes=5).total_seconds()
+        domain_config.domain_groups["domain.com"] = {
+            "domains": ["domain.com", "www.domain.com"],
+            "dns_records_updated": (datetime.utcnow() - timedelta(days=1)).timestamp(),
+        }
+
+        cert_manager = CertificateManager(
+            certbot,
+            domain_config,
+            cert_storage,
+            [],
+            dns_delay,
+            fake_extract_x509_dns_names,
+            'nobody@example.com'
+        )
+        with mock.patch(__name__ + '.FakeCertbotClient.request_cert') as mock_request_cert:
+            mock_request_cert.side_effect = subprocess.CalledProcessError(
+                stderr=b'Request failure', returncode=128, cmd=''
+            )
+            cert_manager.run()
+            mock_send_email.assert_called_once()
+            assert 'Request failure' in mock_send_email.call_args[0][2]
+            certbot.reset()
+
+        cert_manager.run()
+        certbot.reset()
+
+        del domain_config.domain_groups["domain.com"]
+        with mock.patch(__name__ + '.FakeCertbotClient.remove_cert') as mock_remove_cert:
+            mock_remove_cert.side_effect = subprocess.CalledProcessError(
+                stderr=b'Remove failure', returncode=128, cmd=''
+            )
+            cert_manager.run()
+            mock_send_email.assert_called()
+            assert 'Remove failure' in mock_send_email.call_args[0][2]
+            certbot.reset()
