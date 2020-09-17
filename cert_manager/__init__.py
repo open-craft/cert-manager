@@ -93,13 +93,12 @@ class CertificateManager:
         if self.failure_alert_email:
             from_address = '{}@{}'.format(pwd.getpwuid(os.getuid())[0], socket.gethostname())
             exception_msg = exception.stderr.decode('utf-8') if hasattr(exception, 'stderr') else str(exception)
-            email_message = """From: {}
-            To: {}
-            Subject: Alert: {}
-
-            Below is the exception:
-            {}
-            """.format(from_address, self.failure_alert_email, message.replace('\n', ''), exception_msg)
+            email_message = (
+                'From: {}\n'
+                'To: {}\n'
+                'Subject: Alert: {}\n\n'
+                'Below is the exception:\n{}'
+            ).format(from_address, self.failure_alert_email, message.replace('\n', ''), exception_msg)
             send_email(from_address, self.failure_alert_email, email_message)
 
     def get_current_domains(self):
