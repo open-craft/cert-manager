@@ -11,7 +11,6 @@ Certificates are requested using Certbot.
 
 import argparse
 import logging
-import pathlib
 import sys
 
 import consul
@@ -45,6 +44,7 @@ def parse_command_line(args):
     parser.add_argument("--consul-token")
     parser.add_argument("--deploy-hook", default='/usr/local/sbin/deploy_cert.sh')
     parser.add_argument("--dns-delay", type=int, default=120)
+    parser.add_argument('--failure-alert-email', default=None)
     return parser.parse_args(args)
 
 
@@ -52,7 +52,6 @@ def main(args):
     """Parse command line, run certificate manager."""
     config = parse_command_line(args)
     configure_logger(logger, config.log_level.upper())
-    cert_manager_dir = str(pathlib.Path(__file__).resolve().parent)
     certbot_client = CertbotClient(
         contact_email=config.contact_email,
         webroot_path=config.webroot_path,
@@ -66,6 +65,7 @@ def main(args):
         ConsulCertificateStorage(config.consul_certs_prefix, consul_client=consul_client),
         config.additional_domain,
         dns_delay=config.dns_delay,
+        failure_alert_email=config.failure_alert_email
     )
     manager.run()
 

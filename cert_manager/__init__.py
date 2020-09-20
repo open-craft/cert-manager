@@ -2,9 +2,12 @@
 
 from datetime import datetime
 import logging
+import os
+import pwd
+import socket
 import subprocess
 
-from .utils import extract_x509_dns_names
+from .utils import extract_x509_dns_names, send_email
 from .backends import StorageError
 
 
@@ -19,7 +22,7 @@ class CertificateManager:
     actions.
     """
     def __init__(self, certbot, domain_config, cert_storage, additional_domains,
-                 dns_delay=0, extract_x509_dns_names_func=extract_x509_dns_names):
+                 dns_delay=0, extract_x509_dns_names_func=extract_x509_dns_names, failure_alert_email=None):
         """Initialize a CertificateManager instance."""
         self.certbot = certbot
         self.domain_config = domain_config
@@ -27,6 +30,7 @@ class CertificateManager:
         self.dns_delay = dns_delay
         self.additional_domains = additional_domains
         self.extract_x509_dns_names = extract_x509_dns_names_func
+        self.failure_alert_email = failure_alert_email
 
     def remove_cert(self, main_domain):
         """Remove a certificate from both Certbot and the backend storage."""
@@ -36,20 +40,22 @@ class CertificateManager:
                 "Successfully deleted the certificate for %s from Certbot.", main_domain
             )
         except subprocess.CalledProcessError as exc:
+            message = "Failed to delete the certificate for %s from Certbot:\n%s"
             logger.error(
-                "Failed to delete the certificate for %s from Certbot:\n%s",
+                message,
                 main_domain,
                 exc.stderr,
             )
+            self.send_failure_alert_email(message % (main_domain, ''), exc)
         try:
             self.cert_storage.remove_cert(main_domain)
             logger.info(
                 "Successfully deleted the certificate for %s from the storage backend.", main_domain
             )
-        except StorageError:
-            logger.error(
-                "Failed to delete the certificate for %s from the storage backend.", main_domain
-            )
+        except StorageError as exc:
+            message = "Failed to delete the certificate for %s from the storage backend."
+            logger.error(message, main_domain)
+            self.send_failure_alert_email(message % (main_domain, ), exc)
 
     def request_cert(self, domains):
         """Request a new certificate using the Certbot client."""
@@ -60,17 +66,40 @@ class CertificateManager:
                 "\n    ".join(domains),
             )
         except subprocess.CalledProcessError as exc:
+            error_domains = "\n    ".join(domains)
+            message = (
+                "Failed to obtain a new certificate for these domains:\n    %s\n%s"
+            )
             logger.error(
-                "Failed to obtain a new certificate for these domains:\n    %s\n%s",
-                "\n    ".join(domains),
+                message,
+                error_domains,
                 exc.stderr,
             )
-        except Exception:  # pylint: disable=broad-except
-            logger.exception(
+            self.send_failure_alert_email(message % (error_domains, ''), exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            message = (
                 "An exception occurred when trying to obtain a new certificate for these "
-                "domains:\n    %s",
-                "\n    ".join(domains),
+                "domains:\n    %s"
+                "\n    ".join(domains)
             )
+            logger.exception(message)
+            self.send_failure_alert_email(message, exc)
+
+    def send_failure_alert_email(self, message, exception):
+        """
+        If a failure alert email address is provided, send a failure alert email with the given message
+        and exception
+        """
+        if self.failure_alert_email:
+            from_address = '{}@{}'.format(pwd.getpwuid(os.getuid())[0], socket.gethostname())
+            exception_msg = exception.stderr.decode('utf-8') if hasattr(exception, 'stderr') else str(exception)
+            email_message = (
+                'From: {}\n'
+                'To: {}\n'
+                'Subject: Alert: {}\n\n'
+                'Below is the exception:\n{}'
+            ).format(from_address, self.failure_alert_email, message.replace('\n', ''), exception_msg)
+            send_email(from_address, self.failure_alert_email, email_message)
 
     def get_current_domains(self):
         """Return the domain names of all certificates in the storage backend.
