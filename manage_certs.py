@@ -45,6 +45,7 @@ def parse_command_line(args):
     parser.add_argument("--deploy-hook", default='/usr/local/sbin/deploy_cert.sh')
     parser.add_argument("--dns-delay", type=int, default=120)
     parser.add_argument('--failure-alert-email', default=None)
+    parser.add_argument("--certbot-path", default="/snap/bin/certbot")
     return parser.parse_args(args)
 
 
@@ -53,6 +54,7 @@ def main(args):
     config = parse_command_line(args)
     configure_logger(logger, config.log_level.upper())
     certbot_client = CertbotClient(
+        certbot_path=config.certbot_path,
         contact_email=config.contact_email,
         webroot_path=config.webroot_path,
         deploy_hook=config.deploy_hook,

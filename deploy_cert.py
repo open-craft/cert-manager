@@ -23,6 +23,7 @@ def parse_command_line(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("--log-level", default="info")
     parser.add_argument("--consul-certs-prefix", default="certs")
+    parser.add_argument("--certbot-path", default="/snap/bin/certbot")
     return parser.parse_args(args)
 
 
@@ -31,7 +32,7 @@ def main(args):
     config = parse_command_line(args)
     configure_logger(logger, config.log_level.upper())
 
-    certbot_client = CertbotClient()
+    certbot_client = CertbotClient(certbot_path=config.certbot_path)
     live_dir = pathlib.Path(os.environ["RENEWED_LINEAGE"])
     pem_data = certbot_client.get_cert_data_from_live_dir(live_dir)
 
