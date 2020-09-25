@@ -2,8 +2,8 @@
 
 from datetime import datetime, timedelta
 import json
-import mock
 import subprocess
+from unittest.mock import patch
 
 from . import CertificateManager
 
@@ -178,7 +178,7 @@ class TestCertificateManager:
         assert certbot.removals == ["new-domain.com"]
         certbot.reset()
 
-    @mock.patch('cert_manager.send_email')
+    @patch('cert_manager.send_email')
     def test_failure_alert_email(self, mock_send_email):
         domain_config = FakeDomainConfiguration()
         cert_storage = FakeCertificateStorage()
@@ -198,12 +198,12 @@ class TestCertificateManager:
             fake_extract_x509_dns_names,
             'nobody@example.com'
         )
-        with mock.patch(__name__ + '.FakeCertbotClient.request_cert') as mock_request_cert:
+        with patch(__name__ + '.FakeCertbotClient.request_cert') as mock_request_cert:
             mock_request_cert.side_effect = subprocess.CalledProcessError(
                 stderr=b'Request failure', returncode=128, cmd=''
             )
             cert_manager.run()
-            mock_send_email.assert_called_once()
+            assert mock_send_email.call_count == 1
             assert 'Request failure' in mock_send_email.call_args[0][2]
             certbot.reset()
 
@@ -211,11 +211,11 @@ class TestCertificateManager:
         certbot.reset()
 
         del domain_config.domain_groups["domain.com"]
-        with mock.patch(__name__ + '.FakeCertbotClient.remove_cert') as mock_remove_cert:
+        with patch(__name__ + '.FakeCertbotClient.remove_cert') as mock_remove_cert:
             mock_remove_cert.side_effect = subprocess.CalledProcessError(
                 stderr=b'Remove failure', returncode=128, cmd=''
             )
             cert_manager.run()
-            mock_send_email.assert_called()
+            assert mock_send_email.call_count == 2
             assert 'Remove failure' in mock_send_email.call_args[0][2]
             certbot.reset()

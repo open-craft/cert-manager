@@ -7,9 +7,10 @@ import subprocess
 class CertbotClient:
     """A client to interact with Certbot."""
 
-    def __init__(self, contact_email=None, webroot_path=None, deploy_hook=None,
-                 letsencrypt_use_staging=None):
+    def __init__(self, certbot_path=None, contact_email=None, webroot_path=None,
+                 deploy_hook=None, letsencrypt_use_staging=None):
         """Initialize the Certbot client."""
+        self.certbot_path = certbot_path
         self.contact_email = contact_email
         self.webroot_path = webroot_path
         self.deploy_hook = deploy_hook
@@ -18,7 +19,7 @@ class CertbotClient:
     def request_cert(self, domains):
         """Request a new SSL certificate from Let's Encrypt."""
         command = [
-            "certbot", "certonly",
+            self.certbot_path, "certonly",
             "--email", self.contact_email,
             "--webroot",
             "--webroot-path", self.webroot_path,
@@ -53,7 +54,7 @@ class CertbotClient:
     def remove_cert(self, main_domain):
         """Remove a certificate from Certbot and the backend storage."""
         command = [
-            "certbot", "delete",
+            self.certbot_path, "delete",
             "--cert-name", main_domain,
         ]
         result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -62,7 +63,7 @@ class CertbotClient:
     def list_certs(self):
         """List the certificate names of all certificates currently managed by Certbot."""
         result = subprocess.run(
-            ["certbot", "certificates"],
+            [self.certbot_path, "certificates"],
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
             universal_newlines=True,
