@@ -7,6 +7,7 @@ name = "pypi"
 python-consul = "~= 1.1"
 pyopenssl = "~= 18.0"
 cryptography = "~= 2.9"
+tldextract = "~= 2.2.3"
 
 [dev-packages]
 pylint = "*"

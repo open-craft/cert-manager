@@ -6,6 +6,7 @@ import os
 import pwd
 import socket
 import subprocess
+import tldextract
 
 from .utils import extract_x509_dns_names, send_email
 from .backends import StorageError
@@ -128,7 +129,20 @@ class CertificateManager:
                 timestamp = datetime.utcnow().timestamp()
                 dns_updated = domain_group['dns_records_updated']
                 if dns_updated is not None and timestamp - dns_updated > self.dns_delay:
-                    self.request_cert(domains)
+                    internal_domains = []
+                    external_domains = []
+                    for each_domain in domains:
+                        domain_elem = tldextract.extract(each_domain)
+                        # Separate internal domains and external domains
+                        if domain_elem.domain == 'opencraft':
+                            internal_domains.append(each_domain)
+                        else:
+                            external_domains.append(each_domain)
+                    # request separate certs for each of the domains
+                    if internal_domains:
+                        self.request_cert(internal_domains)
+                    if external_domains:
+                        self.request_cert(external_domains)
 
     def remove_unneeded(self, configured_domains, current_domains):
         """Remove unneeded certificates from the backend storage."""
