@@ -6,7 +6,7 @@ import os
 import pwd
 import socket
 import subprocess
-import tldextract
+from tld import get_tld
 
 from .utils import extract_x509_dns_names, send_email
 from .backends import StorageError
@@ -132,7 +132,7 @@ class CertificateManager:
                     internal_domains = []
                     external_domains = []
                     for each_domain in domains:
-                        domain_elem = tldextract.extract(each_domain)
+                        domain_elem = get_tld(each_domain, as_object=True)
                         # Separate internal domains and external domains
                         if domain_elem.domain == 'opencraft':
                             internal_domains.append(each_domain)
