@@ -121,7 +121,7 @@ class CertificateManager:
         for main_domain, domain_group in configured_domains.items():
             # Check if at least some of the domains are not covered by the current certificate
             domains = domain_group['domains']
-            if set(domains) - current_domains.get(main_domain, set()):
+            if set(domains) != set(current_domains.get(main_domain, [])):
                 # Request new certificates, but only if DNS records for the domain have already
                 # been set, *and* they have been set more than a preconfigured number of seconds ago
                 # to allow the changes to propagate.
@@ -133,12 +133,9 @@ class CertificateManager:
     def remove_unneeded(self, configured_domains, current_domains):
         """Remove unneeded certificates from the backend storage."""
         all_domains = set()
-        for main_domain, domain_group in configured_domains.items():
-            if domain_group['dns_records_updated'] is not None:
-                all_domains.update(domain_group['domains'])
-        for main_domain, dns_names in current_domains.items():
-            if dns_names.isdisjoint(all_domains):
-                # The certificate isn't needed for any of the currently active domains
+        for main_domain in current_domains.keys():
+            domain_group = configured_domains.get(main_domain, None)
+            if domain_group is None or domain_group['dns_records_updated'] is None:
                 self.remove_cert(main_domain)
 
     def run(self):

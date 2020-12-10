@@ -133,6 +133,7 @@ class TestCertificateManager:
         assert certbot.removals == []
         certbot.reset()
 
+        # Remove domain.com and add opencraft.com to domain config.
         del domain_config.domain_groups["domain.com"]
         domain_config.domain_groups["opencraft.com"] = {
             "domains": ["opencraft.com"],
@@ -141,6 +142,24 @@ class TestCertificateManager:
         cert_manager.run()
         assert certbot.requests == {"opencraft.com": ["opencraft.com"]}
         assert certbot.removals == ["domain.com"]
+        certbot.reset()
+
+        # Add some extra domains to the opencraft.com cert.
+        domain_config.domain_groups["opencraft.com"]["domains"].extend(["www.opencraft.com", "ocim.com"])
+        cert_manager.run()
+        assert certbot.requests == {"opencraft.com": ["opencraft.com", "www.opencraft.com", "ocim.com"]}
+        assert certbot.removals == []
+        certbot.reset()
+
+        # Replace the main domain of the opencraft.com cert, but keep the same list of domains.
+        del domain_config.domain_groups["opencraft.com"]
+        domain_config.domain_groups["ocim.com"] = {
+            "domains": ["ocim.com", "opencraft.com", "www.opencraft.com"],
+            "dns_records_updated": (datetime.utcnow() - timedelta(minutes=6)).timestamp(),
+        }
+        cert_manager.run()
+        assert certbot.requests == {"ocim.com": ["ocim.com", "opencraft.com", "www.opencraft.com"]}
+        assert certbot.removals == ["opencraft.com"]
         certbot.reset()
 
         # Certificate for new domain should not be requested if DNS records haven't been set yet.
