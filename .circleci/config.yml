@@ -16,7 +16,10 @@ jobs:
       - run:
           name: Install python3 and pip3
           command: apt-get update && apt-get install -y python3 python3-pip
-      - run: 
+      - run:
+          name: Install virtualenv version which is compatible with python 3.5
+          command: pip3 install --user virtualenv==v20.0.21
+      - run:
           name: Install pipenv locally
           command: pip3 install --user pipenv
       - restore_cache:
