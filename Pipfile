@@ -15,4 +15,4 @@ pytest = "*"
 
 [requires]
 # Match version on Ubuntu LTS 16.04.6 as closely as possible
-python_version = "3.5"
+python_version = "3.6"
