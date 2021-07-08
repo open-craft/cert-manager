@@ -12,7 +12,7 @@ There are two options to run the unit tests:
 
 ### Devstack way:
 
-To run the unit tests in a devstack (containers), you need to start the devstack:
+To run the unit tests in a devstack (docker), you need to start the devstack:
 
     make start
 
