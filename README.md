@@ -8,6 +8,20 @@ This repository contains a certificate manager based on Certbot, using the Consu
 Running the unit tests
 ----------------------
 
+There are two options to run the unit tests:
+
+### Devstack way:
+
+To run the unit tests in a devstack (docker), you need to start the devstack:
+
+    make start
+
+and run the tests:
+
+    make test
+
+### Locally way:
+
 To run the unit tests locally, first make sure you have pipenv installed.  One way to install it is
 
     pip install --user pipenv
