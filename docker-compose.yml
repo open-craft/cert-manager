@@ -13,7 +13,7 @@ services:
       - "8500:8500"
   test:
     container_name:  cert-manager.devstack.test
-    image: python:3.6
+    image: python:3.8
     environment:
       CONSUL_HTTP_ADDR: cert-manager.devstack.consul:8500
     volumes:

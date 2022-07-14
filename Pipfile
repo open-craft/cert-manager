@@ -5,8 +5,8 @@ name = "pypi"
 
 [packages]
 python-consul = "~= 1.1"
-pyopenssl = "~= 18.0"
-cryptography = "~= 2.9"
+pyopenssl = "~= 22.0"
+cryptography = "~= 37.0"
 
 [dev-packages]
 pylint = "*"
@@ -14,5 +14,5 @@ rope = "*"
 pytest = "*"
 
 [requires]
-# Match version on Ubuntu LTS 16.04.6 as closely as possible
-python_version = "3.6"
+# Match version on Ubuntu LTS 20.04 as closely as possible
+python_version = "3.8"
